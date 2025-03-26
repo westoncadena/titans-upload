@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import ProfileEditForm from './profile-edit-form';
-import { Profile } from '@/types/profile';
+import { ProfileEditForm } from './profile-edit-form';
 
 export default async function ProfileEditPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = await params;
@@ -19,53 +18,6 @@ export default async function ProfileEditPage({ params }: { params: Promise<{ id
 
     if (error || !profile) {
         notFound();
-    }
-
-    // Type assertion with proper error handling
-    const typedProfile = profile as unknown as Profile;
-
-    async function updateProfile(formData: FormData) {
-        'use server';
-
-        try {
-            const name = formData.get('name') as string;
-            const greeting = formData.get('greeting') as string;
-            const bio = formData.get('bio') as string;
-            const image_url = formData.get('image_url') as string;
-            const face_encoding = formData.get('face_encoding') as string;
-
-            if (!name) {
-                return { error: 'Name is required' };
-            }
-
-            const supabase = await createServerClient();
-
-            // Prepare update data
-            const updateData: any = {
-                name,
-                greeting,
-                bio,
-                image_url,
-                face_encoding,
-                updated_at: new Date().toISOString(),
-            };
-
-
-            const { error } = await supabase
-                .from('profiles')
-                .update(updateData)
-                .eq('id', resolvedParams.id);
-
-            if (error) {
-                console.error('Supabase update error:', error);
-                return { error: error.message };
-            }
-
-            return { success: true };
-        } catch (err) {
-            console.error('Server action error:', err);
-            return { error: 'An unexpected error occurred' };
-        }
     }
 
     return (
@@ -83,10 +35,7 @@ export default async function ProfileEditPage({ params }: { params: Promise<{ id
                 </CardHeader>
 
                 <CardContent>
-                    <ProfileEditForm
-                        profile={typedProfile}
-                        updateProfile={updateProfile}
-                    />
+                    <ProfileEditForm profile={profile} />
                 </CardContent>
             </Card>
         </div>

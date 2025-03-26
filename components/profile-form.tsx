@@ -25,6 +25,7 @@ export function ProfileForm() {
     const [isCameraActive, setIsCameraActive] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [imageError, setImageError] = useState<string | null>(null);
 
     const { getRootProps, getInputProps } = useDropzone({
         accept: {
@@ -34,6 +35,8 @@ export function ProfileForm() {
         onDrop: (acceptedFiles) => {
             const file = acceptedFiles[0];
             setFormData((prev) => ({ ...prev, image: file }));
+            // Clear any previous image errors when a new image is uploaded
+            setImageError(null);
 
             // Create preview
             const reader = new FileReader();
@@ -125,6 +128,17 @@ export function ProfileForm() {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
+    // Function to check if the form is valid and complete
+    const isFormValid = () => {
+        return (
+            formData.name.trim() !== '' &&
+            formData.greeting.trim() !== '' &&
+            formData.bio.trim() !== '' &&
+            !!formData.image &&
+            !imageError
+        );
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -196,17 +210,36 @@ export function ProfileForm() {
 
                             if (!response.ok) {
                                 console.error('Face encoding API error:', responseData);
-                                throw new Error(responseData.error || 'Failed to generate face encoding');
+
+                                // Handle specific face detection errors
+                                if (response.status === 422 && responseData.error?.includes('No face detected')) {
+                                    throw new Error('No face detected in the image. Please upload a photo with a clearly visible face.');
+                                } else if (response.status === 400 && responseData.error?.includes('Multiple faces detected')) {
+                                    throw new Error('Multiple faces detected. Please upload a photo with only one face.');
+                                } else {
+                                    throw new Error(responseData.error || 'Failed to generate face encoding. Please try again or select a different photo.');
+                                }
                             }
 
                             face_encoding = responseData.encoding;
                             console.log('Face encoding generated successfully');
-                        } catch (encodingError) {
+                        } catch (encodingError: any) {
                             console.error('Face encoding error:', encodingError);
-                            toast.warning('Face Recognition', {
-                                description: 'Could not generate face encoding. Profile will be created without face recognition.'
+
+                            // Show specific error message based on the error type
+                            const errorMessage = encodingError.message || 'Could not generate face encoding. Please try again or select a different photo.';
+
+                            // For all face encoding errors, show an error and prevent profile creation
+                            toast.error('Face Recognition Error', {
+                                description: errorMessage
                             });
-                            // Continue without face encoding
+
+                            // Set error state to display in the UI
+                            setImageError(errorMessage);
+
+                            // Return early to prevent profile creation without face encoding
+                            setIsSubmitting(false);
+                            return;
                         }
                     }
                 } catch (imageError) {
@@ -281,6 +314,7 @@ export function ProfileForm() {
                             value={formData.name}
                             onChange={handleChange}
                             required
+                            placeholder="Enter name"
                         />
                     </div>
 
@@ -291,6 +325,8 @@ export function ProfileForm() {
                             name="greeting"
                             value={formData.greeting}
                             onChange={handleChange}
+                            required
+                            placeholder="Enter greeting message"
                         />
                     </div>
 
@@ -303,11 +339,12 @@ export function ProfileForm() {
                             onChange={handleChange}
                             placeholder="Tell us about this person..."
                             rows={4}
+                            required
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Profile Image</Label>
+                        <Label>Profile Image <span className="text-red-500">*</span></Label>
 
                         {isCameraActive ? (
                             <div className="space-y-2">
@@ -340,7 +377,10 @@ export function ProfileForm() {
                             <div className="space-y-2">
                                 <div
                                     {...getRootProps()}
-                                    className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-md p-6 text-center cursor-pointer hover:border-gray-400 dark:hover:border-gray-600 transition-colors"
+                                    className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer transition-colors ${imageError
+                                        ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                                        : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
+                                        }`}
                                 >
                                     <input {...getInputProps()} />
                                     {imagePreview ? (
@@ -348,14 +388,20 @@ export function ProfileForm() {
                                             <img
                                                 src={imagePreview}
                                                 alt="Preview"
-                                                className="w-32 h-32 object-cover rounded-full mb-2"
+                                                className={`w-32 h-32 object-cover rounded-full mb-2 ${imageError ? 'border-2 border-red-500' : ''}`}
                                             />
                                             <p className="text-sm text-gray-500">Click or drag to replace</p>
+                                            {imageError && (
+                                                <div className="mt-2 text-red-500 text-sm">
+                                                    <p className="font-medium">Error: {imageError}</p>
+                                                    <p className="mt-1">Please upload a different photo with a single, clearly visible face.</p>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="flex flex-col items-center">
                                             <svg
-                                                className="w-12 h-12 text-gray-400"
+                                                className={`w-12 h-12 ${imageError ? 'text-red-500' : 'text-gray-400'}`}
                                                 fill="none"
                                                 stroke="currentColor"
                                                 viewBox="0 0 24 24"
@@ -368,9 +414,14 @@ export function ProfileForm() {
                                                     d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                                                 />
                                             </svg>
-                                            <p className="mt-2 text-sm text-gray-500">
-                                                Click or drag and drop to upload an image
+                                            <p className={`mt-2 text-sm ${imageError ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                                                {imageError ? 'Please upload a new image' : 'Click or drag and drop to upload an image'}
                                             </p>
+                                            {imageError && (
+                                                <p className="mt-1 text-sm text-red-500">
+                                                    {imageError}
+                                                </p>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -378,7 +429,10 @@ export function ProfileForm() {
                                     type="button"
                                     variant="outline"
                                     className="w-full"
-                                    onClick={toggleCamera}
+                                    onClick={() => {
+                                        setImageError(null);
+                                        toggleCamera();
+                                    }}
                                 >
                                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -391,10 +445,20 @@ export function ProfileForm() {
                     </div>
                 </CardContent>
 
-                <CardFooter>
-                    <Button type="submit" className="w-full" disabled={isSubmitting || isCameraActive}>
+                <CardFooter className="flex flex-col space-y-2">
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={isSubmitting || isCameraActive || !!imageError || !isFormValid()}
+                    >
                         {isSubmitting ? 'Creating...' : 'Create Profile'}
                     </Button>
+
+                    {!isFormValid() && !isSubmitting && !isCameraActive && !imageError && (
+                        <p className="text-sm text-amber-600 dark:text-amber-400">
+                            Please fill out all fields and upload a profile image to continue.
+                        </p>
+                    )}
                 </CardFooter>
             </form>
         </Card>
