@@ -181,7 +181,9 @@ export function ProfileForm() {
                     // After successful image upload, generate face encoding
                     if (image_url) {
                         try {
-                            // Call your serverless function to generate face encoding
+                            console.log('Attempting to generate face encoding for:', image_url);
+
+                            // Call your serverless function to generate face encoding with proper error handling
                             const response = await fetch('/api/generate-face-encoding', {
                                 method: 'POST',
                                 headers: {
@@ -190,13 +192,15 @@ export function ProfileForm() {
                                 body: JSON.stringify({ imageUrl: image_url }),
                             });
 
+                            const responseData = await response.json();
+
                             if (!response.ok) {
-                                throw new Error('Failed to generate face encoding');
+                                console.error('Face encoding API error:', responseData);
+                                throw new Error(responseData.error || 'Failed to generate face encoding');
                             }
 
-                            const data = await response.json();
-                            face_encoding = data.encoding;
-                            console.log('Face encoding generated:', face_encoding);
+                            face_encoding = responseData.encoding;
+                            console.log('Face encoding generated successfully');
                         } catch (encodingError) {
                             console.error('Face encoding error:', encodingError);
                             toast.warning('Face Recognition', {

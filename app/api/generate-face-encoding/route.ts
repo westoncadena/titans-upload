@@ -15,6 +15,8 @@ export async function POST(request: Request) {
             );
         }
 
+        console.log(`Calling Railway API at: ${RAILWAY_SERVICE_URL}/generate-encoding`);
+
         // Prepare headers for the Railway service request
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
@@ -23,29 +25,54 @@ export async function POST(request: Request) {
         // Add authorization header if API key is configured
         if (RAILWAY_API_KEY) {
             headers['Authorization'] = `Bearer ${RAILWAY_API_KEY}`;
+        } else {
+            console.warn('RAILWAY_API_KEY is not set');
         }
 
-        // Call your Railway-hosted face recognition service
-        const response = await fetch(`${RAILWAY_SERVICE_URL}/generate-encoding`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ imageUrl }),
-        });
+        // Call your Railway-hosted face recognition service with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-        if (!response.ok) {
-            // Try to get detailed error message from response
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Railway service error:', errorData);
+        try {
+            const response = await fetch(`${RAILWAY_SERVICE_URL}/generate-encoding`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ imageUrl }),
+                signal: controller.signal
+            });
 
-            return NextResponse.json(
-                { error: errorData.detail || `Face recognition service error: ${response.status}` },
-                { status: response.status }
-            );
+            clearTimeout(timeoutId);
+
+            // Log response status for debugging
+            console.log(`Railway API response status: ${response.status}`);
+
+            if (!response.ok) {
+                // Try to get detailed error message from response
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Railway service error:', errorData);
+
+                return NextResponse.json(
+                    { error: errorData.detail || `Face recognition service error: ${response.status}` },
+                    { status: response.status }
+                );
+            }
+
+            const data = await response.json();
+            console.log('Successfully received face encoding');
+
+            return NextResponse.json({ encoding: data.encoding });
+        } catch (fetchError: any) {
+            console.error('Fetch error:', fetchError.message);
+
+            if (fetchError.name === 'AbortError') {
+                return NextResponse.json(
+                    { error: 'Request timeout - face recognition service took too long to respond' },
+                    { status: 504 }
+                );
+            }
+
+            throw fetchError;
         }
-
-        const data = await response.json();
-
-        return NextResponse.json({ encoding: data.encoding });
     } catch (error: any) {
         console.error('Error generating face encoding:', error);
 

@@ -27,33 +27,45 @@ export default async function ProfileEditPage({ params }: { params: Promise<{ id
     async function updateProfile(formData: FormData) {
         'use server';
 
-        const name = formData.get('name') as string;
-        const greeting = formData.get('greeting') as string;
-        const bio = formData.get('bio') as string;
-        const image_url = formData.get('image_url') as string;
+        try {
+            const name = formData.get('name') as string;
+            const greeting = formData.get('greeting') as string;
+            const bio = formData.get('bio') as string;
+            const image_url = formData.get('image_url') as string;
+            const face_encoding = formData.get('face_encoding') as string;
 
-        if (!name) {
-            return { error: 'Name is required' };
-        }
+            if (!name) {
+                return { error: 'Name is required' };
+            }
 
-        const supabase = await createServerClient();
+            const supabase = await createServerClient();
 
-        const { error } = await supabase
-            .from('profiles')
-            .update({
+            // Prepare update data
+            const updateData: any = {
                 name,
                 greeting,
                 bio,
                 image_url,
+                face_encoding,
                 updated_at: new Date().toISOString(),
-            } as any)
-            .eq('id', resolvedParams.id as any);
+            };
 
-        if (error) {
-            return { error: error.message };
+
+            const { error } = await supabase
+                .from('profiles')
+                .update(updateData)
+                .eq('id', resolvedParams.id);
+
+            if (error) {
+                console.error('Supabase update error:', error);
+                return { error: error.message };
+            }
+
+            return { success: true };
+        } catch (err) {
+            console.error('Server action error:', err);
+            return { error: 'An unexpected error occurred' };
         }
-
-        redirect(`/profiles/${resolvedParams.id}`);
     }
 
     return (
