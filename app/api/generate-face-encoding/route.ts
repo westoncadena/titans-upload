@@ -6,6 +6,7 @@ const RAILWAY_API_KEY = process.env.RAILWAY_FACE_API_KEY;
 
 export async function POST(request: Request) {
     try {
+        console.log('RAILWAY_SERVICE_URL', RAILWAY_SERVICE_URL);
         // Check if the required environment variables are set
         if (!RAILWAY_SERVICE_URL) {
             console.error('RAILWAY_FACE_API_URL environment variable is not defined');
