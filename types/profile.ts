@@ -11,5 +11,6 @@ export interface Profile {
 export interface ProfileFormData {
     name: string;
     greeting: string;
+    bio: string;
     image?: File;
 }
