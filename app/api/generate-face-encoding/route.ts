@@ -6,6 +6,15 @@ const RAILWAY_API_KEY = process.env.RAILWAY_FACE_API_KEY;
 
 export async function POST(request: Request) {
     try {
+        // Check if the required environment variables are set
+        if (!RAILWAY_SERVICE_URL) {
+            console.error('RAILWAY_FACE_API_URL environment variable is not defined');
+            return NextResponse.json(
+                { error: 'Face recognition service is not properly configured' },
+                { status: 500 }
+            );
+        }
+
         const { imageUrl } = await request.json();
 
         if (!imageUrl) {
