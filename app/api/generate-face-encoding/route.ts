@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 
 // Railway service URL and API key from environment variables
-const RAILWAY_SERVICE_URL = process.env.NEXT_PUBLIC_RAILWAY_FACE_API_URL!;
-const RAILWAY_API_KEY = process.env.NEXT_PUBLIC_RAILWAY_FACE_API_KEY;
+const RAILWAY_SERVICE_URL = process.env.NEXT_PUBLIC_RAILWAY_FACE_API_URL as string;
+const RAILWAY_API_KEY = process.env.NEXT_PUBLIC_RAILWAY_FACE_API_KEY as string;
 
 export async function POST(request: Request) {
     try {
         console.log('RAILWAY_SERVICE_URL', RAILWAY_SERVICE_URL);
+        console.log('RAILWAY_API_KEY', RAILWAY_API_KEY);
         // Check if the required environment variables are set
         if (!RAILWAY_SERVICE_URL) {
             console.error('RAILWAY_FACE_API_URL environment variable is not defined');
