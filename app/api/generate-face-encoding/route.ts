@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
 // Railway service URL and API key from environment variables
-const RAILWAY_SERVICE_URL = process.env.RAILWAY_FACE_API_URL!;
-const RAILWAY_API_KEY = process.env.RAILWAY_FACE_API_KEY;
+const RAILWAY_SERVICE_URL = process.env.NEXT_PUBLIC_RAILWAY_FACE_API_URL!;
+const RAILWAY_API_KEY = process.env.NEXT_PUBLIC_RAILWAY_FACE_API_KEY;
 
 export async function POST(request: Request) {
     try {
